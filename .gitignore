@@ -1,0 +1,44 @@
+# Node.js / React
+node_modules/
+build/
+dist/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+coverage/
+
+# Python / Flask
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+env/
+venv/
+*.env
+instance/
+.DS_Store
+
+# Editor specific
+.vscode/
+.idea/
+*.swp
+*~
+
+# OS generated files
+Thumbs.db
+.DS_Store
+
+# Logs
+logs/
+*.log
+
+# Flask specific
+*.sqlite3
+*.db
+
+*.xlsx
