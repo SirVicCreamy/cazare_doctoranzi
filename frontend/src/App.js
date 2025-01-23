@@ -35,11 +35,7 @@ const App = () => {
   const fetchDoctorands = async () => {
     try {
       const response = await axios.get('http://localhost:5000/doctorands');
-      if (Array.isArray(response.data)) {
-        setDoctorands(response.data);
-      } else {
-        setDoctorands([]);
-      }
+      setDoctorands(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error('Error fetching doctorands:', error);
     }
@@ -53,27 +49,13 @@ const App = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      if (isEditing) {
-        await axios.put(`http://localhost:5000/doctorands/${editIndex}`, formData);
-      } else {
-        await axios.post('http://localhost:5000/doctorands', formData);
-      }
-      setFormData({
-        "Full Name": '',
-        "Mother's Name": '',
-        "Father's Name": '',
-        "Phone Number": '',
-        "Dormitory": '',
-        "Room Number": '',
-        "Email": '',
-        "Date of Birth": '',
-        "Nationality": '',
-        "Passport Number": '',
-        "Date of Issue": '',
-        "Date of Expiry": '',
-        "Issuing Authority": '',
-        "Validated As Student": ''
-      });
+      const url = isEditing 
+        ? `http://localhost:5000/doctorands/${editIndex}`
+        : 'http://localhost:5000/doctorands';
+      
+      await (isEditing ? axios.put(url, formData) : axios.post(url, formData));
+      
+      setFormData(Object.fromEntries(Object.keys(formData).map(k => [k, ''])));
       setIsEditing(false);
       setEditIndex(null);
       fetchDoctorands();
@@ -104,23 +86,8 @@ const App = () => {
     setActiveTab(tab);
     if (tab === 'form') {
       setIsEditing(false);
-      setFormData({
-        "Full Name": '',
-        "Mother's Name": '',
-        "Father's Name": '',
-        "Phone Number": '',
-        "Dormitory": '',
-        "Room Number": '',
-        "Email": '',
-        "Date of Birth": '',
-        "Nationality": '',
-        "Passport Number": '',
-        "Date of Issue": '',
-        "Date of Expiry": '',
-        "Issuing Authority": '',
-        "Validated As Student": ''
-      });
-    } else if (tab === 'table') {
+      setFormData(Object.fromEntries(Object.keys(formData).map(k => [k, ''])));
+    } else {
       fetchDoctorands();
     }
   };
@@ -131,49 +98,85 @@ const App = () => {
   };
 
   const handleSort = (key) => {
-    let direction = 'asc';
-    if (sortConfig.key === key && sortConfig.direction === 'asc') {
-      direction = 'desc';
-    }
+    const direction = sortConfig.key === key && sortConfig.direction === 'asc' ? 'desc' : 'asc';
     setSortConfig({ key, direction });
 
-    const sortedDoctorands = [...doctorands].sort((a, b) => {
+    const sorted = [...doctorands].sort((a, b) => {
       if (a[key] < b[key]) return direction === 'asc' ? -1 : 1;
       if (a[key] > b[key]) return direction === 'asc' ? 1 : -1;
       return 0;
     });
-    setDoctorands(sortedDoctorands);
+    setDoctorands(sorted);
   };
 
-  const filteredDoctorands = doctorands.filter((doctorand) =>
+  const filteredDoctorands = doctorands.filter(doctorand =>
     doctorand["Full Name"].toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
     <div className="app-container">
-      <h1 className="app-header">Doctorand Management</h1>
+      <div className="app-content">
+        <h1 className="app-header">Doctorand Management</h1>
 
-      <button className="toggle-dark-mode" onClick={toggleDarkMode}>
-        {darkMode ? 'Light Mode' : 'Dark Mode'}
-      </button>
+        <button className="toggle-dark-mode" onClick={toggleDarkMode}>
+          {darkMode ? 'Light Mode' : 'Dark Mode'}
+        </button>
 
-      <div className="menu">
-        <button
-          className={`menu-button ${activeTab === 'table' ? 'active' : ''}`}
-          onClick={() => handleTabSwitch('table')}
-        >
-          View Doctorands
-        </button>
-        <button
-          className={`menu-button ${activeTab === 'form' ? 'active' : ''}`}
-          onClick={() => handleTabSwitch('form')}
-        >
-          Add/Edit Doctorand
-        </button>
+        <div className="menu">
+          <button
+            className={`menu-button ${activeTab === 'table' ? 'active' : ''}`}
+            onClick={() => handleTabSwitch('table')}
+          >
+            View Doctorands
+          </button>
+          <button
+            className={`menu-button ${activeTab === 'form' ? 'active' : ''}`}
+            onClick={() => handleTabSwitch('form')}
+          >
+            Add/Edit Doctorand
+          </button>
+        </div>
+
+        {activeTab === 'form' && (
+          <form className="form-container" onSubmit={handleSubmit}>
+            {Object.keys(formData).map((key) => (
+              <div className="form-group" key={key}>
+                <label>{key}</label>
+                {key === "Validated As Student" ? (
+                  <select
+                    name={key}
+                    value={formData[key]}
+                    onChange={handleInputChange}
+                    required
+                    className="form-input"
+                  >
+                    <option value="">Select</option>
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                  </select>
+                ) : (
+                  <input
+                    type={key.includes("Date") ? "date" : 
+                          key.includes("Email") ? "email" : 
+                          key.includes("Phone") ? "tel" : "text"}
+                    name={key}
+                    value={formData[key]}
+                    onChange={handleInputChange}
+                    required
+                    className="form-input"
+                  />
+                )}
+              </div>
+            ))}
+            <button type="submit" className="form-button">
+              {isEditing ? 'Update' : 'Add'} Doctorand
+            </button>
+          </form>
+        )}
       </div>
 
       {activeTab === 'table' && (
-        <div className="table-container full-width">
+        <div className="table-container">
           <div className="table-controls">
             <input
               type="text"
@@ -187,27 +190,19 @@ const App = () => {
               filename="doctorands.csv"
               className="download-button"
               target="_blank"
-              style={{
-                padding: '10px 20px',
-                backgroundColor: '#4CAF50',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                textDecoration: 'none',
-                fontWeight: 'bold',
-                fontSize: '0.9rem'
-              }}
             >
               ⬇ Download Table
             </CSVLink>
           </div>
-          <table className="data-table">
+          <table>
             <thead>
               <tr>
                 {Object.keys(formData).map((key) => (
                   <th key={key} onClick={() => handleSort(key)}>
-                    {key} {sortConfig.key === key ? (sortConfig.direction === 'asc' ? '⬆️' : '⬇️') : ''}
+                    {key}
+                    <span className="sort-indicator">
+                      {sortConfig.key === key ? (sortConfig.direction === 'asc' ? '⬆' : '⬇') : ''}
+                    </span>
                   </th>
                 ))}
                 <th>Actions</th>
@@ -220,53 +215,20 @@ const App = () => {
                     <td key={key}>{doctorand[key] || ''}</td>
                   ))}
                   <td>
-                    <button className="action-button edit" onClick={() => handleEdit(index)}>
-                      ✏️ Edit
-                    </button>
-                    <button className="action-button delete" onClick={() => handleDelete(index)}>
-                      ❌ Delete
-                    </button>
+                    <div className="action-buttons">
+                      <button className="action-button edit" onClick={() => handleEdit(index)}>
+                        ✏️ Edit
+                      </button>
+                      <button className="action-button delete" onClick={() => handleDelete(index)}>
+                        ❌ Delete
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-      )}
-
-      {activeTab === 'form' && (
-        <form className="form-container" onSubmit={handleSubmit}>
-          {Object.keys(formData).map((key) => (
-            <div className="form-group" key={key}>
-              <label>{key}</label>
-              {key === "Validated As Student" ? (
-                <select
-                  name={key}
-                  value={formData[key]}
-                  onChange={handleInputChange}
-                  required
-                  className="form-input"
-                >
-                  <option value="">Select</option>
-                  <option value="Yes">Yes</option>
-                  <option value="No">No</option>
-                </select>
-              ) : (
-                <input
-                  type={key.includes("Date") ? "date" : key.includes("Email") ? "email" : key.includes("Phone") ? "tel" : "text"}
-                  name={key}
-                  value={formData[key]}
-                  onChange={handleInputChange}
-                  required
-                  className="form-input"
-                />
-              )}
-            </div>
-          ))}
-          <button type="submit" className="form-button">
-            {isEditing ? 'Update' : 'Add'} Doctorand
-          </button>
-        </form>
       )}
     </div>
   );
